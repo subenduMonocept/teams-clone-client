@@ -62,7 +62,11 @@ const Login = () => {
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm text-center mt-4">{error}</p>
+          <p className="text-red-500 text-sm text-center mt-4">
+            {typeof error === "string"
+              ? error
+              : "An error occurred during login"}
+          </p>
         )}
 
         <button

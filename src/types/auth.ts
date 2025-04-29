@@ -1,14 +1,4 @@
-export interface User {
-  _id: string;
-  email: string;
-  password: string;
-  name: string;
-  role: "user" | "admin";
-  gender: string;
-  profileImage: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { User } from "./user";
 
 export interface AuthResponse {
   token: string;
@@ -22,9 +12,21 @@ export interface UserData {
 
 export interface AuthState {
   isAuthenticated: boolean;
-  token: string | null;
   currentUser: User | null;
-  users: User[];
   loading: boolean;
   error: string | null;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface SignupData extends LoginCredentials {
+  name: string;
+}
+
+export interface AuthError {
+  message: string;
+  status?: number;
 }

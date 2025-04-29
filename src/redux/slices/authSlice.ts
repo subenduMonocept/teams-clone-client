@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { AuthResponse, User, UserData } from "../../types/auth";
+import { User, AuthResponse } from "../../types/user";
+import { UserData } from "../../types/auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -70,11 +71,19 @@ export const login = createAsyncThunk<AuthResponse, UserData>(
   "auth/login",
   async (userData, thunkAPI) => {
     try {
-      const res = await axios.post<AuthResponse>(
-        `${API_URL}/auth/login`,
-        userData
-      );
-      return res.data;
+      const res = await axios.post<{
+        message: string;
+        user: User;
+        accessToken: string;
+        refreshToken: string;
+      }>(`${API_URL}/auth/login`, userData);
+
+      return {
+        user: res.data.user,
+        token: res.data.accessToken,
+        accessToken: res.data.accessToken,
+        refreshToken: res.data.refreshToken,
+      };
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const message =
@@ -175,6 +184,25 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
+    loginSuccess: (state, action: PayloadAction<User>) => {
+      state.isAuthenticated = true;
+      state.currentUser = action.payload;
+      state.error = null;
+    },
+    logoutSuccess: (state) => {
+      state.isAuthenticated = false;
+      state.currentUser = null;
+      state.error = null;
+    },
+    updateUserSuccess: (state, action: PayloadAction<User>) => {
+      state.currentUser = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -267,5 +295,15 @@ const authSlice = createSlice({
   },
 });
 
-export const { setAuth, logout, setUsers, clearError } = authSlice.actions;
+export const {
+  setAuth,
+  logout,
+  setUsers,
+  clearError,
+  setLoading,
+  setError,
+  loginSuccess,
+  logoutSuccess,
+  updateUserSuccess,
+} = authSlice.actions;
 export default authSlice.reducer;

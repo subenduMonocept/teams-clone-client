@@ -175,6 +175,9 @@ const ChatWindow: React.FC = () => {
           <input
             type="text"
             value={message}
+            name="chat-message"
+            id="chat-message"
+            autoComplete="off"
             onChange={(e) => {
               setMessage(e.target.value);
               handleTyping();
@@ -184,6 +187,8 @@ const ChatWindow: React.FC = () => {
           />
           <input
             type="file"
+            id="chat-file-upload"
+            name="chat-file"
             ref={fileInputRef}
             onChange={handleFileSelect}
             className="hidden"
