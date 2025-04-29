@@ -26,26 +26,27 @@ class SocketService {
   }
 
   public connect(token: string): void {
+    if (!token) {
+      console.error("No token provided for socket connection");
+      return;
+    }
+
     if (this.socket?.connected) {
       console.log("Socket already connected");
       return;
     }
 
-    const formattedToken = token.startsWith("Bearer ")
-      ? token
-      : `Bearer ${token}`;
+    const cleanToken = token.replace(/^Bearer\s+/i, "");
+    const formattedToken = `Bearer ${cleanToken}`;
 
-    this.socket = io(
-      import.meta.env.VITE_SOCKET_URL || "http://localhost:5001",
-      {
-        auth: { token: formattedToken },
-        transports: ["websocket", "polling"],
-        reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: this.reconnectTimeout,
-        timeout: 20000,
-      }
-    );
+    this.socket = io(import.meta.env.VITE_SOCKET_URL, {
+      auth: { token: formattedToken },
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionDelay: this.reconnectTimeout,
+      timeout: 20000,
+    });
 
     this.setupEventListeners();
   }
@@ -68,6 +69,14 @@ class SocketService {
     this.socket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
       console.error("Error details:", error.message);
+
+      // If it's an authentication error, we should not retry
+      if (error.message.includes("Authentication error")) {
+        console.error("Authentication failed. Please login again.");
+        this.reconnectAttempts = this.maxReconnectAttempts;
+        return;
+      }
+
       this.reconnectAttempts++;
       if (this.reconnectAttempts <= this.maxReconnectAttempts) {
         console.log(

@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IMessage } from "../../types/chat";
-import { User } from "../../types/auth";
+import { User } from "../../types/user";
 
 interface ActiveChat {
   type: "private" | "group";
