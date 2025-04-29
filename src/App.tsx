@@ -10,12 +10,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { useSelector } from "react-redux";
 import { RootState } from "./redux/store";
 import Navbar from "./components/Navbar";
-import AdminDashboard from "./pages/AdminDashboard";
 
 const App = () => {
-  const { isAuthenticated, currentUser } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   return (
     <>
@@ -64,16 +61,6 @@ const App = () => {
             <ProtectedRoute>
               <DeleteUser />
             </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            isAuthenticated && currentUser?.role === "admin" ? (
-              <AdminDashboard />
-            ) : (
-              <Navigate to="/login" replace />
-            )
           }
         />
         <Route
