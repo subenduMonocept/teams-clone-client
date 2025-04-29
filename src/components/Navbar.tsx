@@ -20,16 +20,6 @@ const Navbar = () => {
           <div className="flex justify-between items-center">
             <div className="flex space-x-6">
               <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  `text-white text-lg font-semibold hover:text-gray-400 ${
-                    isActive ? "text-blue-400" : ""
-                  }`
-                }
-              >
-                Home
-              </NavLink>
-              <NavLink
                 to="/chat"
                 className={({ isActive }) =>
                   `text-white text-lg font-semibold hover:text-gray-400 ${

@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../redux/store";
-import ChatWindow from "../components/Chat/ChatWindow";
-import ChatList from "../components/Chat/ChatList";
+import ChatWindow from "../components/chat/ChatWindow";
+import ChatList from "../components/chat/ChatList";
 import { getAllUsers } from "../redux/slices/authSlice";
 import socketService from "../services/socketService";
 
