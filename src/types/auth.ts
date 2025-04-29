@@ -4,6 +4,8 @@ export interface User {
   password: string;
   name: string;
   role: "user" | "admin";
+  gender: string;
+  profileImage: string;
   createdAt?: string;
   updatedAt?: string;
 }

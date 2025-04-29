@@ -31,7 +31,6 @@ class SocketService {
       return;
     }
 
-    // Ensure token is properly formatted
     const formattedToken = token.startsWith("Bearer ")
       ? token
       : `Bearer ${token}`;
@@ -62,7 +61,6 @@ class SocketService {
     this.socket.on("disconnect", (reason) => {
       console.log("Disconnected from socket server:", reason);
       if (reason === "io server disconnect") {
-        // Server initiated disconnect, try to reconnect
         this.socket?.connect();
       }
     });
@@ -88,16 +86,12 @@ class SocketService {
     });
 
     this.socket.on("newMessage", (message: IMessage) => {
-      // Only add to Redux if it's not our own message
-      // (since we already added it when sending)
       if (message.sender._id !== store.getState().auth.currentUser?._id) {
         store.dispatch(addMessage(message));
       }
     });
 
     this.socket.on("message", (message: IMessage) => {
-      // Only add to Redux if it's not our own message
-      // (since we already added it when sending)
       if (message.sender._id !== store.getState().auth.currentUser?._id) {
         store.dispatch(addMessage(message));
       }
@@ -112,7 +106,6 @@ class SocketService {
     });
 
     this.socket.on("onlineUsers", ({ users }) => {
-      // Set all received users as online
       users.forEach((userId: string) => {
         store.dispatch(setOnlineStatus({ userId, status: true }));
       });
@@ -156,7 +149,6 @@ class SocketService {
   public sendMessage(message: IMessage): void {
     if (!this.socket) return;
 
-    // Transform the message to match the server's expected payload
     const payload = {
       content: message.content,
       receiverId: message.receiver,
@@ -165,10 +157,8 @@ class SocketService {
       fileUrl: message.fileUrl,
     };
 
-    // Add to Redux immediately for optimistic update
     store.dispatch(addMessage(message));
 
-    // Send to server
     this.socket.emit("sendMessage", payload);
   }
 

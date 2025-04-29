@@ -153,7 +153,6 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.token = action.payload.token;
       state.currentUser = action.payload.user;
-      // Store auth data in sessionStorage
       sessionStorage.setItem(
         "auth",
         JSON.stringify({
@@ -168,7 +167,6 @@ const authSlice = createSlice({
       state.token = null;
       state.currentUser = null;
       state.users = [];
-      // Clear auth data from sessionStorage
       sessionStorage.removeItem("auth");
     },
     setUsers: (state, action: PayloadAction<User[]>) => {
@@ -189,7 +187,6 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.token = action.payload.token;
         state.currentUser = action.payload.user;
-        // Store auth data in sessionStorage
         sessionStorage.setItem(
           "auth",
           JSON.stringify({
@@ -212,7 +209,6 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.token = action.payload.token;
         state.currentUser = action.payload.user;
-        // Store auth data in sessionStorage
         sessionStorage.setItem(
           "auth",
           JSON.stringify({
@@ -247,7 +243,7 @@ const authSlice = createSlice({
           state.currentUser = {
             ...state.currentUser,
             ...action.payload,
-            _id: state.currentUser._id, // Preserve the existing _id
+            _id: state.currentUser._id,
           };
           sessionStorage.setItem("user", JSON.stringify(state.currentUser));
         }

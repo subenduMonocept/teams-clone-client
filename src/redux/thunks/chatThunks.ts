@@ -61,7 +61,6 @@ export const uploadFile =
       return fileUrl;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.log("Error response:", error.response); // Debug log
         dispatch(
           setUploadError(
             error.response?.data?.message || "Failed to upload file"

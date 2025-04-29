@@ -9,7 +9,7 @@ import { showToast } from "../utils/toast";
 const DeleteUser = () => {
   const dispatch = useAppDispatch();
 
-  const { users, user: loggedInUser } = useSelector(
+  const { users, currentUser: loggedInUser } = useSelector(
     (state: RootState) => state.auth
   );
 
@@ -57,39 +57,43 @@ const DeleteUser = () => {
           </thead>
           <tbody>
             {users && users.length > 0 ? (
-              users.map((user: User) => {
+              users.map((currentUser: User) => {
                 const fallbackAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
-                  user.name || user.email.split("@")[0]
+                  currentUser.name || currentUser.email.split("@")[0]
                 )}&backgroundColor=ffe082,ffccbc,b3e5fc`;
 
                 return (
-                  <tr key={user._id} className="hover:bg-gray-50">
+                  <tr key={currentUser._id} className="hover:bg-gray-50">
                     <td className="py-2 px-4 border-b">
                       <img
-                        src={user.profileImage || fallbackAvatar}
+                        src={currentUser.profileImage || fallbackAvatar}
                         alt="avatar"
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     </td>
-                    <td className="py-2 px-4 border-b">{user.name}</td>
-                    <td className="py-2 px-4 border-b">{user.email}</td>
+                    <td className="py-2 px-4 border-b">{currentUser.name}</td>
+                    <td className="py-2 px-4 border-b">{currentUser.email}</td>
                     <td className="py-2 px-4 border-b capitalize">
-                      {user.gender || "Not specified"}
+                      {currentUser.gender || "Not specified"}
                     </td>
                     <td className="py-2 px-4 border-b">
                       <button
-                        onClick={() => handleDelete(user._id, user.email)}
+                        onClick={() =>
+                          handleDelete(currentUser._id, currentUser.email)
+                        }
                         disabled={
-                          user.email === loggedInUser?.email ||
-                          loadingId === user._id
+                          currentUser.email === loggedInUser?.email ||
+                          loadingId === currentUser._id
                         }
                         className={`px-3 py-1 text-sm rounded ${
-                          user.email === loggedInUser?.email
+                          currentUser.email === loggedInUser?.email
                             ? "bg-gray-300 cursor-not-allowed"
                             : "bg-red-500 hover:bg-red-600 text-white"
                         } disabled:opacity-50`}
                       >
-                        {loadingId === user._id ? "Deleting..." : "Delete"}
+                        {loadingId === currentUser._id
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
                     </td>
                   </tr>
