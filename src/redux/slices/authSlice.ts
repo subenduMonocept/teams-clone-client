@@ -8,11 +8,13 @@ interface StoredAuth {
   isAuthenticated: boolean;
   token: string | null;
   currentUser: User | null;
+  refreshToken: string | null;
 }
 
 interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
+  refreshToken: string | null;
   currentUser: User | null;
   users: User[];
   loading: boolean;
@@ -23,10 +25,11 @@ const getInitialState = (): AuthState => {
   const storedAuth = sessionStorage.getItem("auth");
   if (storedAuth) {
     const parsedAuth = JSON.parse(storedAuth) as StoredAuth;
-    if (parsedAuth.token && parsedAuth.currentUser) {
+    if (parsedAuth.token && parsedAuth.currentUser && parsedAuth.refreshToken) {
       return {
         isAuthenticated: true,
         token: parsedAuth.token,
+        refreshToken: parsedAuth.refreshToken,
         currentUser: parsedAuth.currentUser,
         users: [],
         loading: false,
@@ -37,6 +40,7 @@ const getInitialState = (): AuthState => {
   return {
     isAuthenticated: false,
     token: null,
+    refreshToken: null,
     currentUser: null,
     users: [],
     loading: false,
@@ -147,6 +151,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.isAuthenticated = false;
       state.token = null;
+      state.refreshToken = null;
       state.currentUser = null;
       state.users = [];
       sessionStorage.removeItem("auth");
@@ -179,6 +184,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.token = action.payload.accessToken;
+        state.refreshToken = action.payload.refreshToken;
         state.currentUser = action.payload.user;
         sessionStorage.setItem(
           "auth",
@@ -186,6 +192,7 @@ const authSlice = createSlice({
             isAuthenticated: true,
             token: action.payload.accessToken,
             currentUser: action.payload.user,
+            refreshToken: action.payload.refreshToken,
           })
         );
       })
