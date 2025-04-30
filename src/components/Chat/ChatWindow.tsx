@@ -14,6 +14,11 @@ const ChatWindow: React.FC = () => {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [callInProgress, setCallInProgress] = useState<{
+    type: "video" | "audio";
+    chatType: "private" | "group";
+  } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +35,10 @@ const ChatWindow: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    setCallInProgress(null);
+  }, [activeChat]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +65,14 @@ const ChatWindow: React.FC = () => {
   };
 
   const handleCall = (type: "video" | "audio") => {
-    if (activeChat) {
-      startCall(type);
-    }
+    if (!activeChat) return;
+
+    startCall(type);
+
+    setCallInProgress({
+      type,
+      chatType: activeChat.type,
+    });
   };
 
   const handleSendMessage = async () => {
@@ -94,6 +108,25 @@ const ChatWindow: React.FC = () => {
             {onlineStatus[chat.id] ? "Online" : "Offline"}
           </p>
         </div>
+        {callInProgress && (
+          <div
+            className="bg-green-100 text-green-800 p-2 
+          flex justify-between items-center border-b px-4"
+          >
+            <span>
+              {callInProgress.type === "video" ? "📹" : "🎧"}{" "}
+              {callInProgress.chatType === "private" ? "Private" : "Group"} call
+              in progress...
+            </span>
+            <button
+              onClick={() => setCallInProgress(null)}
+              className="text-sm bg-red-500 text-white 
+              px-3 py-1 rounded hover:bg-red-600"
+            >
+              End Call
+            </button>
+          </div>
+        )}
         <div className="flex space-x-2">
           <button
             onClick={() => handleCall("video")}

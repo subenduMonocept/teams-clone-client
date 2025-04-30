@@ -1,6 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IMessage } from "../../types/chat";
-import { User } from "../../types/user";
 
 interface ActiveChat {
   type: "private" | "group";
@@ -9,7 +8,6 @@ interface ActiveChat {
 
 interface ChatState {
   messages: IMessage[];
-  users: User[];
   typingStatus: Record<string, boolean>;
   onlineStatus: Record<string, boolean>;
   activeChat: ActiveChat | null;
@@ -21,7 +19,6 @@ interface ChatState {
 
 const initialState: ChatState = {
   messages: [],
-  users: [],
   typingStatus: {},
   onlineStatus: {},
   activeChat: null,
@@ -37,9 +34,6 @@ const chatSlice = createSlice({
   reducers: {
     setMessages: (state, action: PayloadAction<IMessage[]>) => {
       state.messages = action.payload;
-    },
-    setUsers: (state, action: PayloadAction<User[]>) => {
-      state.users = action.payload;
     },
     addMessage: (state, action: PayloadAction<IMessage>) => {
       state.messages.push(action.payload);
@@ -79,7 +73,6 @@ const chatSlice = createSlice({
 
 export const {
   setMessages,
-  setUsers,
   addMessage,
   setTypingStatus,
   setOnlineStatus,

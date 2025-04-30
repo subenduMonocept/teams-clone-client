@@ -2,7 +2,7 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../redux/store";
 import { setActiveChat } from "../../redux/slices/chatSlice";
-import { User } from "../../types/auth";
+import { User } from "../../types/user";
 
 const ChatList: React.FC = () => {
   const dispatch = useDispatch();
@@ -43,7 +43,10 @@ const ChatList: React.FC = () => {
             onClick={() => handleChatSelect(user)}
           >
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+              <div
+                className="w-10 h-10 rounded-full p-4 
+              bg-gray-300 flex items-center justify-center"
+              >
                 {user.name.charAt(0).toUpperCase()}
               </div>
               <div className="ml-3">
