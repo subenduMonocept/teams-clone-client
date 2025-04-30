@@ -1,9 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import axios from "axios";
 import { User, AuthResponse } from "../../types/user";
 import { UserData } from "../../types/auth";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from "../../utils/axiosInstance";
+import axios from "axios";
 
 interface StoredAuth {
   isAuthenticated: boolean;
@@ -51,18 +50,17 @@ export const signup = createAsyncThunk<AuthResponse, UserData>(
   "auth/signup",
   async (userData, thunkAPI) => {
     try {
-      const res = await axios.post<AuthResponse>(
-        `${API_URL}/auth/signup`,
+      const res = await axiosInstance.post<AuthResponse>(
+        "/auth/signup",
         userData
       );
       return res.data;
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const message =
-          err.response?.data?.error || "An unknown error occurred";
-        return thunkAPI.rejectWithValue(message);
-      }
-      return thunkAPI.rejectWithValue("An unknown error occurred");
+    } catch (err) {
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data?.error?.msg
+          ? err.response.data.error.msg
+          : "An unknown error occurred while signup";
+      return thunkAPI.rejectWithValue(errorMessage);
     }
   }
 );
@@ -71,26 +69,17 @@ export const login = createAsyncThunk<AuthResponse, UserData>(
   "auth/login",
   async (userData, thunkAPI) => {
     try {
-      const res = await axios.post<{
-        message: string;
-        user: User;
-        accessToken: string;
-        refreshToken: string;
-      }>(`${API_URL}/auth/login`, userData);
-
-      return {
-        user: res.data.user,
-        token: res.data.accessToken,
-        accessToken: res.data.accessToken,
-        refreshToken: res.data.refreshToken,
-      };
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const message =
-          err.response?.data?.error || "An unknown error occurred";
-        return thunkAPI.rejectWithValue(message);
-      }
-      return thunkAPI.rejectWithValue("An unknown error occurred");
+      const res = await axiosInstance.post<AuthResponse>(
+        "/auth/login",
+        userData
+      );
+      return res.data;
+    } catch (err) {
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data?.error?.msg
+          ? err.response.data.error.msg
+          : "An unknown error occurred while login";
+      return thunkAPI.rejectWithValue(errorMessage);
     }
   }
 );
@@ -99,17 +88,16 @@ export const deleteUser = createAsyncThunk(
   "auth/deleteUser",
   async (email: string, thunkAPI) => {
     try {
-      const res = await axios.delete(`${API_URL}/auth/delete-user`, {
+      const res = await axiosInstance.delete("/auth/delete-user", {
         data: { email },
       });
       return res.data;
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const message =
-          err.response?.data?.error || "An unknown error occurred";
-        return thunkAPI.rejectWithValue(message);
-      }
-      return thunkAPI.rejectWithValue("An unknown error occurred");
+    } catch (err) {
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data?.error?.msg
+          ? err.response.data.error.msg
+          : "An unknown error occurred while deleting user";
+      return thunkAPI.rejectWithValue(errorMessage);
     }
   }
 );
@@ -121,18 +109,17 @@ export const updateUser = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      const res = await axios.put(
-        `${API_URL}/auth/update-user?email=${email}`,
+      const res = await axiosInstance.put(
+        `/auth/update-user?email=${email}`,
         userData
       );
       return res.data;
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const message =
-          err.response?.data?.error || "An unknown error occurred";
-        return thunkAPI.rejectWithValue(message);
-      }
-      return thunkAPI.rejectWithValue("An unknown error occurred");
+    } catch (err) {
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data?.error?.msg
+          ? err.response.data.error.msg
+          : "An unknown error occurred while updating user";
+      return thunkAPI.rejectWithValue(errorMessage);
     }
   }
 );
@@ -141,15 +128,14 @@ export const getAllUsers = createAsyncThunk<User[], void>(
   "auth/getAllUsers",
   async (_, thunkAPI) => {
     try {
-      const res = await axios.get<User[]>(`${API_URL}/auth/get-all-users`);
+      const res = await axiosInstance.get<User[]>("/auth/get-all-users");
       return res.data;
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const message =
-          err.response?.data?.error || "An unknown error occurred";
-        return thunkAPI.rejectWithValue(message);
-      }
-      return thunkAPI.rejectWithValue("An unknown error occurred");
+    } catch (err) {
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data?.error?.msg
+          ? err.response.data.error.msg
+          : "An unknown error occurred while retrieving al users";
+      return thunkAPI.rejectWithValue(errorMessage);
     }
   }
 );
@@ -158,19 +144,6 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    setAuth: (state, action: PayloadAction<{ token: string; user: User }>) => {
-      state.isAuthenticated = true;
-      state.token = action.payload.token;
-      state.currentUser = action.payload.user;
-      sessionStorage.setItem(
-        "auth",
-        JSON.stringify({
-          isAuthenticated: true,
-          token: action.payload.token,
-          currentUser: action.payload.user,
-        })
-      );
-    },
     logout: (state) => {
       state.isAuthenticated = false;
       state.token = null;
@@ -184,25 +157,6 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
-    },
-    setError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
-    },
-    loginSuccess: (state, action: PayloadAction<User>) => {
-      state.isAuthenticated = true;
-      state.currentUser = action.payload;
-      state.error = null;
-    },
-    logoutSuccess: (state) => {
-      state.isAuthenticated = false;
-      state.currentUser = null;
-      state.error = null;
-    },
-    updateUserSuccess: (state, action: PayloadAction<User>) => {
-      state.currentUser = action.payload;
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -210,19 +164,8 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(signup.fulfilled, (state, action) => {
+      .addCase(signup.fulfilled, (state) => {
         state.loading = false;
-        state.isAuthenticated = true;
-        state.token = action.payload.token;
-        state.currentUser = action.payload.user;
-        sessionStorage.setItem(
-          "auth",
-          JSON.stringify({
-            isAuthenticated: true,
-            token: action.payload.token,
-            currentUser: action.payload.user,
-          })
-        );
       })
       .addCase(signup.rejected, (state, action) => {
         state.loading = false;
@@ -235,13 +178,13 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
+        state.token = action.payload.accessToken;
         state.currentUser = action.payload.user;
         sessionStorage.setItem(
           "auth",
           JSON.stringify({
             isAuthenticated: true,
-            token: action.payload.token,
+            token: action.payload.accessToken,
             currentUser: action.payload.user,
           })
         );
@@ -295,15 +238,6 @@ const authSlice = createSlice({
   },
 });
 
-export const {
-  setAuth,
-  logout,
-  setUsers,
-  clearError,
-  setLoading,
-  setError,
-  loginSuccess,
-  logoutSuccess,
-  updateUserSuccess,
-} = authSlice.actions;
+export const { logout, setUsers, clearError } = authSlice.actions;
+
 export default authSlice.reducer;

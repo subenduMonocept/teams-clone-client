@@ -19,6 +19,5 @@ export interface UserUpdate {
 export interface AuthResponse {
   user: User;
   accessToken: string;
-  refreshToken: string;
   token: string;
 }

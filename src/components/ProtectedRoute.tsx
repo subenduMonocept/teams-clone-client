@@ -2,10 +2,11 @@ import { JSX } from "react";
 import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const token = sessionStorage.getItem("token");
-  const user = sessionStorage.getItem("user");
+  const auth = sessionStorage.getItem("auth");
 
-  if (!token || !user) {
+  const parsedAuth = auth ? JSON.parse(auth) : null;
+
+  if (!parsedAuth?.token || !parsedAuth?.currentUser) {
     return <Navigate to="/login" replace />;
   }
 

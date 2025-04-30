@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../../redux/store";
+import { useSelector } from "react-redux";
+import { RootState } from "../../redux/store";
 import { useChat } from "../../customHooks/useChat";
 import { IMessage } from "../../types/chat";
 import { FaPaperclip, FaVideo, FaPhone, FaFile } from "react-icons/fa";
-import { uploadFile } from "../../redux/thunks/chatThunks";
 
 interface ActiveChat {
   type: "private" | "group";
@@ -17,7 +16,6 @@ const ChatWindow: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const dispatch = useDispatch<AppDispatch>();
 
   const { messages, typingStatus, onlineStatus, activeChat } = useSelector(
     (state: RootState) => state.chat
@@ -55,8 +53,6 @@ const ChatWindow: React.FC = () => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    dispatch(uploadFile(file));
   };
 
   const handleCall = (type: "video" | "audio") => {

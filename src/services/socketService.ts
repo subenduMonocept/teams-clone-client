@@ -70,7 +70,6 @@ class SocketService {
       console.error("Socket connection error:", error);
       console.error("Error details:", error.message);
 
-      // If it's an authentication error, we should not retry
       if (error.message.includes("Authentication error")) {
         console.error("Authentication failed. Please login again.");
         this.reconnectAttempts = this.maxReconnectAttempts;
