@@ -25,7 +25,56 @@ class SocketService {
     return SocketService.instance;
   }
 
-  public connect(token: string): void {
+  private redirectToLogin(): string {
+    sessionStorage.clear();
+    window.location.href = "/login";
+    return "";
+  }
+
+  private async getValidToken(): Promise<string> {
+    try {
+      const storedAuth = sessionStorage.getItem("auth");
+      const parsedAuth = storedAuth ? JSON.parse(storedAuth) : null;
+      const refreshToken = parsedAuth?.refreshToken;
+
+      if (!refreshToken) {
+        console.error("No refresh token found in storage.");
+        return "";
+      }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/refresh-token`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${refreshToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refreshToken }),
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Failed to refresh token.");
+        return "";
+      }
+      const data = await res.json();
+
+      const updatedAuth = {
+        ...parsedAuth,
+        token: data.accessToken,
+        refreshToken: data.refreshToken,
+      };
+
+      sessionStorage.setItem("auth", JSON.stringify(updatedAuth));
+      return data.accessToken;
+    } catch (err) {
+      console.error("Error refreshing token:", err);
+      return this.redirectToLogin();
+    }
+  }
+
+  public async connect(token: string): Promise<void> {
     if (!token) {
       console.error("No token provided for socket connection");
       return;
@@ -36,8 +85,7 @@ class SocketService {
       return;
     }
 
-    const cleanToken = token.replace(/^Bearer\s+/i, "");
-    const formattedToken = `Bearer ${cleanToken}`;
+    const formattedToken = `Bearer ${await this.getValidToken()}`;
 
     this.socket = io(import.meta.env.VITE_SOCKET_URL, {
       auth: { token: formattedToken },
@@ -60,7 +108,10 @@ class SocketService {
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.log("Disconnected from socket server:", reason);
+      const currentTime = new Date().toLocaleTimeString();
+      console.log(
+        `Disconnected from socket server at ${currentTime}. Reason: ${reason}`
+      );
       if (reason === "io server disconnect") {
         this.socket?.connect();
       }
