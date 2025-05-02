@@ -6,6 +6,12 @@ interface ActiveChat {
   id: string;
 }
 
+interface ActiveCall {
+  type: "video" | "audio";
+  participants: string[];
+  status: "connecting" | "active" | "ended";
+}
+
 interface ChatState {
   messages: IMessage[];
   typingStatus: Record<string, boolean>;
@@ -15,6 +21,7 @@ interface ChatState {
   uploadError: string | null;
   loading: boolean;
   error: string | null;
+  activeCall: ActiveCall | null;
 }
 
 const initialState: ChatState = {
@@ -26,6 +33,7 @@ const initialState: ChatState = {
   uploadError: null,
   loading: false,
   error: null,
+  activeCall: null,
 };
 
 const chatSlice = createSlice({
@@ -68,6 +76,17 @@ const chatSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
+    setActiveCall: (state, action: PayloadAction<ActiveCall | null>) => {
+      state.activeCall = action.payload;
+    },
+    updateCallStatus: (
+      state,
+      action: PayloadAction<"connecting" | "active" | "ended">
+    ) => {
+      if (state.activeCall) {
+        state.activeCall.status = action.payload;
+      }
+    },
   },
 });
 
@@ -81,6 +100,8 @@ export const {
   setUploadError,
   setLoading,
   setError,
+  setActiveCall,
+  updateCallStatus,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

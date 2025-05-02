@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { useChat } from "../../customHooks/useChat";
-import { IMessage } from "../../types/chat";
+import { ICallData, IMessage } from "../../types/chat";
 import { FaPaperclip, FaVideo, FaPhone, FaFile } from "react-icons/fa";
+import socketService from "../../services/socketService";
 
 interface ActiveChat {
   type: "private" | "group";
@@ -11,6 +12,8 @@ interface ActiveChat {
 }
 
 const ChatWindow: React.FC = () => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -18,6 +21,7 @@ const ChatWindow: React.FC = () => {
     type: "video" | "audio";
     chatType: "private" | "group";
   } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<ICallData | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -40,6 +44,35 @@ const ChatWindow: React.FC = () => {
     setCallInProgress(null);
   }, [activeChat]);
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [activeChat]);
+
+  useEffect(() => {
+    const handleIncomingCall = (data: ICallData) => {
+      if (data.status === "ringing") {
+        setIncomingCall({
+          from: data.from,
+          type: data.type,
+          status: data.status,
+        });
+      } else if (data.status === "ended") {
+        setIncomingCall(null);
+        setCallInProgress(null);
+      }
+    };
+
+    if (activeChat?.id) {
+      socketService.registerCallHandler(activeChat.id, handleIncomingCall);
+    }
+
+    return () => {
+      if (activeChat?.id) {
+        socketService.unregisterCallHandler(activeChat.id);
+      }
+    };
+  }, [activeChat]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && activeChat) {
@@ -47,28 +80,32 @@ const ChatWindow: React.FC = () => {
     }
   };
 
-  const handleTyping = () => {
-    if (!isTyping) {
-      setIsTyping(true);
-      setTyping(true);
-      const timeout = setTimeout(() => {
-        setIsTyping(false);
-        setTyping(false);
-      }, 3000);
-      return () => clearTimeout(timeout);
-    }
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data?.fileUrl) {
+        sendMessage(file.name, "file", data.fileUrl);
+      }
+    } catch (err) {
+      console.error("File upload failed:", err);
+    }
   };
 
   const handleCall = (type: "video" | "audio") => {
     if (!activeChat) return;
 
     startCall(type);
-
     setCallInProgress({
       type,
       chatType: activeChat.type,
@@ -86,6 +123,34 @@ const ChatWindow: React.FC = () => {
     }
   };
 
+  const answerCall = () => {
+    if (!incomingCall || !activeChat) return;
+
+    socketService.startCall(incomingCall.from, undefined, incomingCall.type);
+    setIncomingCall(null);
+    setCallInProgress({
+      type: incomingCall.type,
+      chatType: "private",
+    });
+  };
+
+  const rejectCall = () => {
+    if (!incomingCall) return;
+    socketService.endCall(incomingCall.from, undefined, incomingCall.type);
+    setIncomingCall(null);
+  };
+
+  useEffect(() => {
+    if (isTyping) {
+      const timeout = setTimeout(() => {
+        setIsTyping(false);
+        setTyping(false);
+      }, 3000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isTyping, setTyping]);
+
   if (!activeChat) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -98,14 +163,40 @@ const ChatWindow: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
+      {incomingCall && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg text-center">
+            <h3 className="text-xl mb-4">
+              Incoming {incomingCall.type} call from {incomingCall.from}
+            </h3>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={answerCall}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              >
+                Accept
+              </button>
+              <button
+                onClick={rejectCall}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="p-4 border-b flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold">
             {chat.type === "private" ? "Private Chat" : "Group Chat"}
           </h2>
           <p className="text-sm text-gray-500">
-            {typingStatus[chat.id] ? "Typing..." : ""}
-            {onlineStatus[chat.id] ? "Online" : "Offline"}
+            {typingStatus[chat.id]
+              ? "Typing..."
+              : onlineStatus[chat.id]
+              ? "Online"
+              : "Offline"}
           </p>
         </div>
         {callInProgress && (
@@ -119,7 +210,14 @@ const ChatWindow: React.FC = () => {
               in progress...
             </span>
             <button
-              onClick={() => setCallInProgress(null)}
+              onClick={() => {
+                socketService.endCall(
+                  activeChat.type === "private" ? activeChat.id : undefined,
+                  activeChat.type === "group" ? activeChat.id : undefined,
+                  callInProgress.type
+                );
+                setCallInProgress(null);
+              }}
               className="text-sm bg-red-500 text-white 
               px-3 py-1 rounded hover:bg-red-600"
             >
@@ -188,7 +286,8 @@ const ChatWindow: React.FC = () => {
       {/* Image Popup */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black 
+          bg-opacity-75 flex items-center justify-center z-50"
           onClick={() => setSelectedImage(null)}
         >
           <img
@@ -204,15 +303,18 @@ const ChatWindow: React.FC = () => {
           <input
             type="text"
             value={message}
+            ref={inputRef}
             name="chat-message"
             id="chat-message"
             autoComplete="off"
             onChange={(e) => {
               setMessage(e.target.value);
-              handleTyping();
+              setIsTyping(true);
+              setTyping(true);
             }}
             placeholder="Type a message..."
-            className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 p-2 border rounded-l-lg 
+            focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="file"
@@ -226,14 +328,16 @@ const ChatWindow: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 border-t border-b border-r hover:bg-gray-100"
+            className="p-2 border-t border-b border-r 
+            hover:bg-gray-100"
             title="Attach file"
           >
             <FaPaperclip />
           </button>
           <button
             type="submit"
-            className="p-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600"
+            className="p-2 bg-blue-500 text-white 
+            rounded-r-lg hover:bg-blue-600"
           >
             Send
           </button>

@@ -249,38 +249,34 @@ class SocketService {
   }
 
   public startCall(
-    receiverId: string | undefined,
-    groupId: string | undefined,
-    type: "video" | "audio"
+    receiverId?: string,
+    groupId?: string,
+    type: "video" | "audio" = "video"
   ): void {
-    if (!this.socket?.connected) {
-      console.error("Socket not connected");
-      return;
-    }
+    if (!this.socket?.connected) return;
 
     this.socket.emit("call", {
       receiverId,
       groupId,
       type,
       status: "ringing",
+      timestamp: new Date().toISOString(),
     });
   }
 
   public endCall(
-    receiverId: string | undefined,
-    groupId: string | undefined,
-    type: "video" | "audio"
+    receiverId?: string,
+    groupId?: string,
+    type: "video" | "audio" = "video"
   ): void {
-    if (!this.socket?.connected) {
-      console.error("Socket not connected");
-      return;
-    }
+    if (!this.socket?.connected) return;
 
     this.socket.emit("call", {
       receiverId,
       groupId,
       type,
       status: "ended",
+      timestamp: new Date().toISOString(),
     });
   }
 
