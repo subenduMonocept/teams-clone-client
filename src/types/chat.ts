@@ -28,3 +28,26 @@ export interface ICallData {
   type: "video" | "audio";
   status: "ringing" | "accepted" | "rejected" | "ended";
 }
+
+export interface ActiveChat {
+  type: "private" | "group";
+  id: string;
+}
+
+export interface ActiveCall {
+  type: "video" | "audio";
+  participants: string[];
+  status: "connecting" | "active" | "ended";
+}
+
+export interface ChatState {
+  messages: IMessage[];
+  typingStatus: Record<string, boolean>;
+  onlineStatus: Record<string, boolean>;
+  activeChat: ActiveChat | null;
+  uploadStatus: "idle" | "loading" | "success" | "error";
+  uploadError: string | null;
+  loading: boolean;
+  error: string | null;
+  activeCall: ActiveCall | null;
+}

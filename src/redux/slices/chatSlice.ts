@@ -1,28 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { IMessage } from "../../types/chat";
-
-interface ActiveChat {
-  type: "private" | "group";
-  id: string;
-}
-
-interface ActiveCall {
-  type: "video" | "audio";
-  participants: string[];
-  status: "connecting" | "active" | "ended";
-}
-
-interface ChatState {
-  messages: IMessage[];
-  typingStatus: Record<string, boolean>;
-  onlineStatus: Record<string, boolean>;
-  activeChat: ActiveChat | null;
-  uploadStatus: "idle" | "loading" | "success" | "error";
-  uploadError: string | null;
-  loading: boolean;
-  error: string | null;
-  activeCall: ActiveCall | null;
-}
+import { ActiveCall, ActiveChat, ChatState, IMessage } from "../../types/chat";
 
 const initialState: ChatState = {
   messages: [],

@@ -145,14 +145,16 @@ function disconnectSocket() {
 function sendMessage(message: IMessage) {
   if (!socket) return;
 
-  store.dispatch(addMessage(message));
-  socket.emit("sendMessage", {
+  const payload = {
     content: message.content,
     receiverId: message.receiver,
     groupId: message.group,
     type: message.type,
     fileUrl: message.fileUrl,
-  });
+  };
+
+  store.dispatch(addMessage(message));
+  socket.emit("sendMessage", payload);
 }
 
 function sendTypingStatus(isTyping: boolean, chatId: string) {
