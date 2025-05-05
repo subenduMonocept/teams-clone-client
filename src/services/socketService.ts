@@ -125,9 +125,9 @@ function setupListeners() {
     });
   });
 
-  socket.on("call", (callData: ICallData) => {
-    const handler = callHandlers.get(callData.from);
-    if (handler) handler(callData);
+  socket.on("call", (data: ICallData) => {
+    const handler = callHandlers.get(data.from);
+    if (handler) handler(data);
   });
 
   socket.on("messagesLoaded", (messages: IMessage[]) => {
@@ -198,16 +198,16 @@ function endCall(
   });
 }
 
-function registerCallHandler(
-  userId: string,
+const registerCallHandler = (
+  chatId: string,
   handler: (data: ICallData) => void
-) {
-  callHandlers.set(userId, handler);
-}
+) => {
+  callHandlers.set(chatId, handler);
+};
 
-function unregisterCallHandler(userId: string) {
-  callHandlers.delete(userId);
-}
+const unregisterCallHandler = (chatId: string) => {
+  callHandlers.delete(chatId);
+};
 
 function isConnected() {
   return socket?.connected || false;

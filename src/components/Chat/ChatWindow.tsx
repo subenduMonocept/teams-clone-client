@@ -52,11 +52,7 @@ const ChatWindow: React.FC = () => {
   useEffect(() => {
     const handleIncomingCall = (data: ICallData) => {
       if (data.status === "ringing") {
-        setIncomingCall({
-          from: data.from,
-          type: data.type,
-          status: data.status,
-        });
+        setIncomingCall(data);
       } else if (data.status === "ended") {
         setIncomingCall(null);
         setCallInProgress(null);
@@ -126,13 +122,9 @@ const ChatWindow: React.FC = () => {
 
   const answerCall = () => {
     if (!incomingCall || !activeChat) return;
-
     socketService.startCall(incomingCall.from, undefined, incomingCall.type);
     setIncomingCall(null);
-    setCallInProgress({
-      type: incomingCall.type,
-      chatType: "private",
-    });
+    setCallInProgress({ type: incomingCall.type, chatType: "private" });
   };
 
   const rejectCall = () => {
@@ -169,8 +161,8 @@ const ChatWindow: React.FC = () => {
     <div className="flex flex-col h-full">
       {incomingCall && (
         <div
-          className="fixed inset-0 bg-black 
-        bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 
+        flex items-center justify-center z-50"
         >
           <div className="bg-white p-6 rounded-lg text-center">
             <h3 className="text-xl mb-4">
@@ -179,13 +171,15 @@ const ChatWindow: React.FC = () => {
             <div className="flex justify-center gap-4">
               <button
                 onClick={answerCall}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                className="bg-green-500 text-white px-4 py-2 
+                rounded hover:bg-green-600"
               >
                 Accept
               </button>
               <button
                 onClick={rejectCall}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                className="bg-red-500 text-white px-4 py-2 
+                rounded hover:bg-red-600"
               >
                 Reject
               </button>
