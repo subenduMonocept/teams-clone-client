@@ -14,6 +14,11 @@ interface ActiveChat {
 const ChatWindow: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const { messages, typingStatus, onlineStatus, activeChat } = useSelector(
+    (state: RootState) => state.chat
+  );
+  const { users, currentUser } = useSelector((state: RootState) => state.auth);
+
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -25,11 +30,6 @@ const ChatWindow: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const { messages, typingStatus, onlineStatus, activeChat } = useSelector(
-    (state: RootState) => state.chat
-  );
-  const { currentUser } = useSelector((state: RootState) => state.auth);
 
   const { sendMessage, setTyping, startCall } = useChat();
 
@@ -162,6 +162,9 @@ const ChatWindow: React.FC = () => {
 
   const chat = activeChat as ActiveChat;
 
+  const selectedUser =
+    chat.type === "private" ? users.find((user) => user._id === chat.id) : null;
+
   return (
     <div className="flex flex-col h-full">
       {incomingCall && (
@@ -193,15 +196,24 @@ const ChatWindow: React.FC = () => {
       <div className="p-4 border-b flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold">
-            {chat.type === "private" ? "Private Chat" : "Group Chat"}
+            {chat.type === "private"
+              ? selectedUser?.name || "Private Chat"
+              : "Group Chat"}
           </h2>
-          <p className="text-sm text-gray-500">
-            {typingStatus[chat.id]
-              ? "Typing..."
-              : onlineStatus[chat.id]
-              ? "Online"
-              : "Offline"}
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            {typingStatus[chat.id] ? (
+              <span>Typing...</span>
+            ) : (
+              <>
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    onlineStatus[chat.id] ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></span>
+                <span>{onlineStatus[chat.id] ? "Online" : "Offline"}</span>
+              </>
+            )}
+          </div>
         </div>
         {callInProgress && (
           <div
@@ -290,7 +302,6 @@ const ChatWindow: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Image Popup */}
       {selectedImage && (
         <div
           className="fixed inset-0 bg-black 
@@ -320,7 +331,7 @@ const ChatWindow: React.FC = () => {
               setTyping(true);
             }}
             placeholder="Type a message..."
-            className="flex-1 p-2 border rounded-l-lg 
+            className="flex-1 h-10 px-3 border rounded-l-lg 
             focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
@@ -335,15 +346,15 @@ const ChatWindow: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 border-t border-b border-r 
-            hover:bg-gray-100"
+            className="h-10 px-3 border-t border-b border-r 
+          hover:bg-gray-100"
             title="Attach file"
           >
             <FaPaperclip />
           </button>
           <button
             type="submit"
-            className="p-2 bg-blue-500 text-white 
+            className="h-10 px-4 bg-blue-500 text-white 
             rounded-r-lg hover:bg-blue-600"
           >
             Send
