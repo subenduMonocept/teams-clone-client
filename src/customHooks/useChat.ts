@@ -1,7 +1,7 @@
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import { IMessage } from "../types/chat";
-import socketService from "../services/socketService";
+import { SocketService as socketService } from "../services/socketService";
 import { useEffect } from "react";
 
 export const useChat = () => {

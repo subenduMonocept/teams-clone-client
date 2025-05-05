@@ -4,7 +4,7 @@ import { RootState, AppDispatch } from "../redux/store";
 import ChatWindow from "../components/chat/ChatWindow";
 import ChatList from "../components/chat/ChatList";
 import { getAllUsers } from "../redux/slices/authSlice";
-import socketService from "../services/socketService";
+import { SocketService as socketService } from "../services/socketService";
 
 const Chat: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();

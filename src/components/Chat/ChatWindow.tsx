@@ -4,7 +4,7 @@ import { RootState } from "../../redux/store";
 import { useChat } from "../../customHooks/useChat";
 import { ICallData, IMessage } from "../../types/chat";
 import { FaPaperclip, FaVideo, FaPhone, FaFile } from "react-icons/fa";
-import socketService from "../../services/socketService";
+import { SocketService as socketService } from "../../services/socketService";
 
 interface ActiveChat {
   type: "private" | "group";
@@ -30,6 +30,7 @@ const ChatWindow: React.FC = () => {
     (state: RootState) => state.chat
   );
   const { currentUser } = useSelector((state: RootState) => state.auth);
+
   const { sendMessage, setTyping, startCall } = useChat();
 
   const scrollToBottom = () => {
@@ -164,10 +165,13 @@ const ChatWindow: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {incomingCall && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black 
+        bg-opacity-50 flex items-center justify-center z-50"
+        >
           <div className="bg-white p-6 rounded-lg text-center">
             <h3 className="text-xl mb-4">
-              Incoming {incomingCall.type} call from {incomingCall.from}
+              {incomingCall.type.toUpperCase()} call from {incomingCall.from}
             </h3>
             <div className="flex justify-center gap-4">
               <button
@@ -254,7 +258,7 @@ const ChatWindow: React.FC = () => {
               } mb-4`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${
+                className={`min-w-[20%] max-w-[70%] rounded-lg p-3 ${
                   isCurrentUser ? "bg-blue-500 text-white" : "bg-gray-200"
                 }`}
               >
@@ -273,8 +277,11 @@ const ChatWindow: React.FC = () => {
                 ) : (
                   <p className="text-sm">{msg.content}</p>
                 )}
-                <p className="text-xs mt-1 opacity-70">
-                  {new Date(msg.createdAt).toLocaleTimeString()}
+                <p className="text-[0.6rem] mt-1 opacity-60 text-right">
+                  {new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>

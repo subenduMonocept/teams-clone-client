@@ -8,339 +8,230 @@ import {
 } from "../redux/slices/chatSlice";
 import { IMessage, ICallData } from "../types/chat";
 
-class SocketService {
-  private static instance: SocketService;
-  private socket: Socket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectTimeout = 1000;
-  private callHandlers: Map<string, (data: ICallData) => void> = new Map();
+let socket: Socket | null = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+const reconnectTimeout = 1000;
+const callHandlers = new Map<string, (data: ICallData) => void>();
 
-  private constructor() {}
+function redirectToLogin() {
+  sessionStorage.clear();
+  window.location.href = "/login";
+}
 
-  public static getInstance(): SocketService {
-    if (!SocketService.instance) {
-      SocketService.instance = new SocketService();
-    }
-    return SocketService.instance;
-  }
+async function getValidToken(): Promise<string> {
+  try {
+    const storedAuth = sessionStorage.getItem("auth");
+    const parsedAuth = storedAuth ? JSON.parse(storedAuth) : null;
+    const refreshToken = parsedAuth?.refreshToken;
 
-  private redirectToLogin(): string {
-    sessionStorage.clear();
-    window.location.href = "/login";
-    return "";
-  }
+    if (!refreshToken) return "";
 
-  private async getValidToken(): Promise<string> {
-    try {
-      const storedAuth = sessionStorage.getItem("auth");
-      const parsedAuth = storedAuth ? JSON.parse(storedAuth) : null;
-      const refreshToken = parsedAuth?.refreshToken;
-
-      if (!refreshToken) {
-        console.error("No refresh token found in storage.");
-        return "";
-      }
-
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/refresh-token`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ refreshToken }),
-        }
-      );
-
-      if (!res.ok) {
-        console.error("Failed to refresh token.");
-        return "";
-      }
-      const data = await res.json();
-
-      const updatedAuth = {
-        ...parsedAuth,
-        token: data.accessToken,
-        refreshToken: data.refreshToken,
-      };
-
-      sessionStorage.setItem("auth", JSON.stringify(updatedAuth));
-      return data.accessToken;
-    } catch (err) {
-      console.error("Error refreshing token:", err);
-      return this.redirectToLogin();
-    }
-  }
-
-  public async connect(token: string): Promise<void> {
-    if (!token) {
-      console.error("No token provided for socket connection");
-      return;
-    }
-
-    if (this.socket?.connected) {
-      console.log("Socket already connected");
-      return;
-    }
-
-    const formattedToken = `Bearer ${await this.getValidToken()}`;
-
-    this.socket = io(import.meta.env.VITE_SOCKET_URL, {
-      auth: { token: formattedToken },
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
-      reconnectionDelay: this.reconnectTimeout,
-      timeout: 20000,
-    });
-
-    this.setupEventListeners();
-  }
-
-  private setupEventListeners(): void {
-    if (!this.socket) return;
-
-    this.socket.on("connect", () => {
-      console.log("Connected to socket server");
-      this.reconnectAttempts = 0;
-    });
-
-    this.socket.on("disconnect", (reason) => {
-      const currentTime = new Date().toLocaleTimeString();
-      console.log(
-        `Disconnected from socket server at ${currentTime}. Reason: ${reason}`
-      );
-      if (reason === "io server disconnect") {
-        this.socket?.connect();
-      }
-    });
-
-    this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-      console.error("Error details:", error.message);
-
-      if (error.message.includes("Authentication error")) {
-        console.error("Authentication failed. Please login again.");
-        this.reconnectAttempts = this.maxReconnectAttempts;
-        return;
-      }
-
-      this.reconnectAttempts++;
-      if (this.reconnectAttempts <= this.maxReconnectAttempts) {
-        console.log(
-          `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-        );
-        setTimeout(() => {
-          this.socket?.connect();
-        }, this.reconnectTimeout * this.reconnectAttempts);
-      } else {
-        console.error("Max reconnection attempts reached");
-      }
-    });
-
-    this.socket.on("error", (error) => {
-      console.error("Socket error:", error);
-    });
-
-    this.socket.on("newMessage", (message: IMessage) => {
-      if (message.sender._id !== store.getState().auth.currentUser?._id) {
-        store.dispatch(addMessage(message));
-      }
-    });
-
-    this.socket.on("message", (message: IMessage) => {
-      if (message.sender._id !== store.getState().auth.currentUser?._id) {
-        store.dispatch(addMessage(message));
-      }
-    });
-
-    this.socket.on("typing", ({ userId, isTyping }) => {
-      store.dispatch(setTypingStatus({ userId, status: isTyping }));
-    });
-
-    this.socket.on("onlineStatus", ({ userId, isOnline }) => {
-      store.dispatch(setOnlineStatus({ userId, status: isOnline }));
-    });
-
-    this.socket.on("onlineUsers", ({ users }) => {
-      users.forEach((userId: string) => {
-        store.dispatch(setOnlineStatus({ userId, status: true }));
-      });
-    });
-
-    this.socket.on(
-      "userJoined",
-      ({ userId, groupId }: { userId: string; groupId: string }) => {
-        console.log(`User ${userId} joined group ${groupId}`);
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/auth/refresh-token`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refreshToken }),
       }
     );
 
-    this.socket.on(
-      "userLeft",
-      ({ userId, groupId }: { userId: string; groupId: string }) => {
-        console.log(`User ${userId} left group ${groupId}`);
-      }
-    );
+    if (!res.ok) return "";
 
-    this.socket.on("call", (callData: ICallData) => {
-      const handler = this.callHandlers.get(callData.from);
-      if (handler) {
-        handler(callData);
-      }
-    });
-
-    this.socket.on("messagesLoaded", (messages: IMessage[]) => {
-      store.dispatch(setMessages(messages));
-    });
-  }
-
-  public disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-      this.callHandlers.clear();
-      this.reconnectAttempts = 0;
-    }
-  }
-
-  public sendMessage(message: IMessage): void {
-    if (!this.socket) return;
-
-    const payload = {
-      content: message.content,
-      receiverId: message.receiver,
-      groupId: message.group,
-      type: message.type,
-      fileUrl: message.fileUrl,
+    const data = await res.json();
+    const updatedAuth = {
+      ...parsedAuth,
+      token: data.accessToken,
+      refreshToken: data.refreshToken,
     };
-
-    store.dispatch(addMessage(message));
-
-    this.socket.emit("sendMessage", payload);
-  }
-
-  public sendTypingStatus(isTyping: boolean, chatId: string): void {
-    if (!this.socket?.connected) {
-      console.error("Socket not connected");
-      return;
-    }
-
-    this.socket.emit("typing", { isTyping, chatId });
-  }
-
-  public joinGroup(groupId: string): void {
-    if (!this.socket?.connected) {
-      console.error("Socket not connected");
-      return;
-    }
-
-    this.socket.emit("joinGroup", groupId);
-  }
-
-  public leaveGroup(groupId: string): void {
-    if (!this.socket?.connected) {
-      console.error("Socket not connected");
-      return;
-    }
-
-    this.socket.emit("leaveGroup", groupId);
-  }
-
-  public startCall(
-    receiverId?: string,
-    groupId?: string,
-    type: "video" | "audio" = "video"
-  ): void {
-    if (!this.socket?.connected) return;
-
-    this.socket.emit("call", {
-      receiverId,
-      groupId,
-      type,
-      status: "ringing",
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  public endCall(
-    receiverId?: string,
-    groupId?: string,
-    type: "video" | "audio" = "video"
-  ): void {
-    if (!this.socket?.connected) return;
-
-    this.socket.emit("call", {
-      receiverId,
-      groupId,
-      type,
-      status: "ended",
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  public registerCallHandler(
-    userId: string,
-    handler: (data: ICallData) => void
-  ) {
-    this.callHandlers.set(userId, handler);
-  }
-
-  public unregisterCallHandler(userId: string) {
-    this.callHandlers.delete(userId);
-  }
-
-  public onMessage(callback: (message: IMessage) => void): void {
-    if (!this.socket) return;
-    this.socket.on("message", callback);
-  }
-
-  public onTyping(
-    callback: (data: { userId: string; isTyping: boolean }) => void
-  ): void {
-    if (!this.socket) return;
-    this.socket.on("typing", callback);
-  }
-
-  public onUserOnline(callback: (data: { userId: string }) => void): void {
-    if (!this.socket) return;
-    this.socket.on("onlineStatus", callback);
-  }
-
-  public onUserOffline(callback: (data: { userId: string }) => void): void {
-    if (!this.socket) return;
-    this.socket.on("onlineStatus", callback);
-  }
-
-  public onCall(
-    callback: (data: {
-      from: string;
-      type: "video" | "audio";
-      status: string;
-    }) => void
-  ): void {
-    if (!this.socket) return;
-    this.socket.on("call", callback);
-  }
-
-  public removeAllListeners(): void {
-    if (!this.socket) return;
-    this.socket.removeAllListeners();
-  }
-
-  public isConnected(): boolean {
-    return this.socket?.connected || false;
-  }
-
-  public loadMessages(receiverId?: string, groupId?: string): void {
-    if (!this.socket?.connected) {
-      console.error("Socket not connected");
-      return;
-    }
-
-    this.socket.emit("loadMessages", { receiverId, groupId });
+    sessionStorage.setItem("auth", JSON.stringify(updatedAuth));
+    return data.accessToken;
+  } catch (err) {
+    console.log(err);
+    redirectToLogin();
+    return "";
   }
 }
 
-export default SocketService.getInstance();
+async function connectSocket(token: string) {
+  if (!token || socket?.connected) return;
+
+  const formattedToken = `Bearer ${await getValidToken()}`;
+  socket = io(import.meta.env.VITE_SOCKET_URL, {
+    auth: { token: formattedToken },
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionAttempts: maxReconnectAttempts,
+    reconnectionDelay: reconnectTimeout,
+    timeout: 20000,
+  });
+
+  setupListeners();
+}
+
+function setupListeners() {
+  if (!socket) return;
+
+  socket.on("connect", () => {
+    reconnectAttempts = 0;
+    console.log("Connected to socket");
+  });
+
+  socket.on("disconnect", (reason) => {
+    console.log("Disconnected:", reason);
+    if (reason === "io server disconnect") {
+      socket?.connect();
+    }
+  });
+
+  socket.on("connect_error", async (error) => {
+    console.error("Socket connect error:", error.message);
+    if (error.message.includes("Authentication")) {
+      reconnectAttempts = maxReconnectAttempts;
+      return;
+    }
+
+    reconnectAttempts++;
+    if (reconnectAttempts <= maxReconnectAttempts) {
+      setTimeout(() => socket?.connect(), reconnectTimeout * reconnectAttempts);
+    }
+  });
+
+  socket.on("reconnect_attempt", async () => {
+    const freshToken = `Bearer ${await getValidToken()}`;
+    if (socket) socket.auth = { token: freshToken };
+  });
+
+  socket.on("newMessage", (message: IMessage) => {
+    if (message.sender._id !== store.getState().auth.currentUser?._id) {
+      store.dispatch(addMessage(message));
+    }
+  });
+
+  socket.on("typing", ({ userId, isTyping }) => {
+    store.dispatch(setTypingStatus({ userId, status: isTyping }));
+  });
+
+  socket.on("onlineStatus", ({ userId, isOnline }) => {
+    store.dispatch(setOnlineStatus({ userId, status: isOnline }));
+  });
+
+  socket.on("onlineUsers", ({ users }) => {
+    users.forEach((userId: string) => {
+      store.dispatch(setOnlineStatus({ userId, status: true }));
+    });
+  });
+
+  socket.on("call", (callData: ICallData) => {
+    const handler = callHandlers.get(callData.from);
+    if (handler) handler(callData);
+  });
+
+  socket.on("messagesLoaded", (messages: IMessage[]) => {
+    store.dispatch(setMessages(messages));
+  });
+}
+
+function disconnectSocket() {
+  socket?.disconnect();
+  socket = null;
+  reconnectAttempts = 0;
+  callHandlers.clear();
+}
+
+function sendMessage(message: IMessage) {
+  if (!socket) return;
+
+  store.dispatch(addMessage(message));
+  socket.emit("sendMessage", {
+    content: message.content,
+    receiverId: message.receiver,
+    groupId: message.group,
+    type: message.type,
+    fileUrl: message.fileUrl,
+  });
+}
+
+function sendTypingStatus(isTyping: boolean, chatId: string) {
+  if (!socket?.connected) return;
+  socket.emit("typing", { isTyping, chatId });
+}
+
+function joinGroup(groupId: string) {
+  socket?.emit("joinGroup", groupId);
+}
+
+function leaveGroup(groupId: string) {
+  socket?.emit("leaveGroup", groupId);
+}
+
+function startCall(
+  receiverId?: string,
+  groupId?: string,
+  type: "video" | "audio" = "video"
+) {
+  socket?.emit("call", {
+    receiverId,
+    groupId,
+    type,
+    status: "ringing",
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function endCall(
+  receiverId?: string,
+  groupId?: string,
+  type: "video" | "audio" = "video"
+) {
+  socket?.emit("call", {
+    receiverId,
+    groupId,
+    type,
+    status: "ended",
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function registerCallHandler(
+  userId: string,
+  handler: (data: ICallData) => void
+) {
+  callHandlers.set(userId, handler);
+}
+
+function unregisterCallHandler(userId: string) {
+  callHandlers.delete(userId);
+}
+
+function isConnected() {
+  return socket?.connected || false;
+}
+
+function removeAllListeners() {
+  socket?.removeAllListeners();
+}
+
+function loadMessages(receiverId?: string, groupId?: string) {
+  if (!socket?.connected) return;
+  socket.emit("loadMessages", { receiverId, groupId });
+}
+
+export const SocketService = {
+  connect: connectSocket,
+  disconnect: disconnectSocket,
+  sendMessage,
+  sendTypingStatus,
+  joinGroup,
+  leaveGroup,
+  startCall,
+  endCall,
+  registerCallHandler,
+  unregisterCallHandler,
+  isConnected,
+  removeAllListeners,
+  loadMessages,
+};
