@@ -37,39 +37,6 @@ const ChatWindow: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    setCallInProgress(null);
-  }, [activeChat]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [activeChat]);
-
-  useEffect(() => {
-    const handleIncomingCall = (data: ICallData) => {
-      if (data.status === "ringing") {
-        setIncomingCall(data);
-      } else if (data.status === "ended") {
-        setIncomingCall(null);
-        setCallInProgress(null);
-      }
-    };
-
-    if (activeChat?.id) {
-      socketService.registerCallHandler(activeChat.id, handleIncomingCall);
-    }
-
-    return () => {
-      if (activeChat?.id) {
-        socketService.unregisterCallHandler(activeChat.id);
-      }
-    };
-  }, [activeChat]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && activeChat) {
@@ -143,6 +110,38 @@ const ChatWindow: React.FC = () => {
       return () => clearTimeout(timeout);
     }
   }, [isTyping, setTyping]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    setCallInProgress(null);
+  }, [activeChat]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [activeChat]);
+
+  useEffect(() => {
+    const handleIncomingCall = (data: ICallData) => {
+      if (data.status === "ringing") {
+        console.log(data);
+      } else if (data.status === "ended") {
+        setCallInProgress(null);
+      }
+    };
+
+    if (activeChat?.id) {
+      socketService.registerCallHandler(activeChat.id, handleIncomingCall);
+    }
+
+    return () => {
+      if (activeChat?.id) {
+        socketService.unregisterCallHandler(activeChat.id);
+      }
+    };
+  }, [activeChat]);
 
   if (!activeChat) {
     return (
@@ -255,6 +254,8 @@ const ChatWindow: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto p-4">
         {messages.map((msg: IMessage) => {
+          if (!msg?.sender) return null;
+
           const isCurrentUser = currentUser?._id === msg.sender._id;
           return (
             <div
@@ -320,9 +321,12 @@ const ChatWindow: React.FC = () => {
             id="chat-message"
             autoComplete="off"
             onChange={(e) => {
-              setMessage(e.target.value);
-              setIsTyping(true);
-              setTyping(true);
+              const val = e.target.value;
+              setMessage(val);
+              if (val.trim()) {
+                setIsTyping(true);
+                setTyping(true);
+              }
             }}
             placeholder="Type a message..."
             className="flex-1 h-10 px-3 border rounded-l-lg 
