@@ -7,6 +7,7 @@ import {
   setMessages,
 } from "../redux/slices/chatSlice";
 import { IMessage, ICallData } from "../types/chat";
+import { showToast } from "../utils/toast";
 
 let socket: Socket | null = null;
 let reconnectAttempts = 0;
@@ -50,7 +51,9 @@ async function getValidToken(): Promise<string> {
     sessionStorage.setItem("auth", JSON.stringify(updatedAuth));
     return data.accessToken;
   } catch (err) {
-    console.log(err);
+    const errorMessage =
+      typeof err === "string" ? err : "Error occured while authentication";
+    showToast(errorMessage, "error");
     redirectToLogin();
     return "";
   }

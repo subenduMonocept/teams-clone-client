@@ -5,6 +5,7 @@ import { useChat } from "../../customHooks/useChat";
 import { ICallData, IMessage } from "../../types/chat";
 import { FaPaperclip, FaVideo, FaPhone, FaFile } from "react-icons/fa";
 import { SocketService as socketService } from "../../services/socketService";
+import { showToast } from "../../utils/toast";
 
 interface ActiveChat {
   type: "private" | "group";
@@ -62,7 +63,8 @@ const ChatWindow: React.FC = () => {
         sendMessage(file.name, "file", data.fileUrl);
       }
     } catch (err) {
-      console.error("File upload failed:", err);
+      const errorMessage = typeof err === "string" ? err : "File upload failed";
+      showToast(errorMessage, "error");
     }
   };
 
